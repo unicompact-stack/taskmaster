@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskMaster — Дашборд задач</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6366f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f172a; --surface: #1e293b; --surface2: #334155;
+  --border: #475569; --border-hover: #64748b;
+  --text: #f1f5f9; --text2: #94a3b8; --text3: #64748b;
+  --accent: #6366f1; --accent2: #a78bfa; --accent-bg: rgba(99,102,241,0.15);
+  --green: #10b981; --green-bg: rgba(16,185,129,0.15);
+  --yellow: #f59e0b; --yellow-bg: rgba(245,158,11,0.15);
+  --red: #ef4444; --red-bg: rgba(239,68,68,0.15);
+  --radius: 12px; --radius-sm: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background: radial-gradient(ellipse at top, rgba(99,102,241,0.12), transparent 60%),
+              radial-gradient(ellipse at bottom right, rgba(167,139,250,0.08), transparent 50%);
+  pointer-events: none; z-index: 0;
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.app { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+/* Sidebar */
+.sidebar {
+  width: 260px; background: rgba(30,41,59,0.8); backdrop-filter: blur(20px);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 10;
+}
+.sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); }
+.logo { font-size: 18px; font-weight: 700; color: var(--accent2); display: flex; align-items: center; gap: 8px; }
+.nav { padding: 16px 12px; flex: 1; overflow-y: auto; }
+.nav-section { margin-bottom: 16px; }
+.nav-section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); padding: 8px 12px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s;
+  color: var(--text2); font-size: 14px; font-weight: 500; margin-bottom: 2px;
+}
+.nav-item:hover { background: rgba(99,102,241,0.1); color: var(--text); }
+.nav-item.active { background: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
+.nav-item .icon { font-size: 18px; width: 24px; text-align: center; }
+.nav-item .badge { margin-left: auto; background: var(--accent); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
+
+/* Main */
+.main { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-height: 100vh; }
+.header {
+  background: rgba(30,41,59,0.8); backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border); padding: 16px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 5;
+}
+.header h2 { font-size: 20px; font-weight: 700; }
+.header-time { font-size: 13px; color: var(--text2); margin-left: 12px; }
+.content { flex: 1; padding: 24px; overflow-y: auto; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s; font-family: var(--font);
+}
+.btn:hover { border-color: var(--border-hover); background: var(--surface2); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: #5b4bd5; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* Tab Content */
+.tab-content { display: none; animation: fadeIn 0.2s ease; }
+.tab-content.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Calendar Controls */
+.calendar-controls { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+.view-toggle { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px; }
+.view-btn {
+  padding: 6px 14px; border: none; background: transparent; border-radius: 6px;
+  cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text2); transition: all 0.15s;
+}
+.view-btn:hover { color: var(--text); }
+.view-btn.active { background: var(--accent); color: #fff; }
+.period-nav { display: flex; align-items: center; gap: 8px; }
+.period-label { font-weight: 600; font-size: 15px; min-width: 160px; text-align: center; }
+
+/* Calendar Grid (Month) */
+.calendar-grid { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.calendar-header { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; margin-bottom: 8px; }
+.calendar-day-name { text-align: center; padding: 8px; font-weight: 600; font-size: 12px; color: var(--text3); text-transform: uppercase; }
+.calendar-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+.calendar-day {
+  aspect-ratio: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 6px; cursor: pointer; transition: all 0.15s;
+  display: flex; flex-direction: column; align-items: center; position: relative;
+}
+.calendar-day:hover { border-color: var(--accent); background: var(--accent-bg); transform: translateY(-1px); }
+.calendar-day.today { border: 2px solid var(--accent); box-shadow: 0 0 0 2px rgba(99,102,241,0.2); }
+.calendar-day.other-month { opacity: 0.25; }
+.calendar-day-number { font-weight: 600; font-size: 13px; }
+.calendar-day-dots { display: flex; gap: 3px; margin-top: 4px; }
+.dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.dot.overdue { background: var(--red); }
+
+/* Week View */
+.week-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 8px; }
+.week-day-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  min-height: 200px; padding: 12px; transition: all 0.15s;
+}
+.week-day-card:hover { border-color: var(--accent); }
+.week-day-card.today { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(99,102,241,0.2); }
+.week-day-header { font-weight: 600; font-size: 13px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.week-task-item {
+  background: var(--surface2); padding: 6px 8px; border-radius: 6px;
+  margin-bottom: 4px; font-size: 12px; cursor: pointer; transition: all 0.15s;
+}
+.week-task-item:hover { background: var(--accent-bg); }
+
+/* Day View */
+.day-task-list { display: flex; flex-direction: column; gap: 8px; }
+
+/* Year View */
+.year-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 12px; }
+.month-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+.month-card-header { font-weight: 600; font-size: 14px; text-align: center; margin-bottom: 8px; color: var(--accent2); }
+.mini-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+.mini-day {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; border-radius: 4px; cursor: pointer; transition: all 0.1s; position: relative;
+}
+.mini-day:hover { background: var(--accent-bg); }
+.mini-day.has-tasks { background: var(--accent); color: #fff; font-weight: 600; }
+.mini-day.has-tasks:hover { background: var(--accent2); }
+.mini-day.today { outline: 2px solid var(--accent); outline-offset: -1px; }
+.mini-day-header { font-size: 9px; color: var(--text3); text-align: center; font-weight: 600; }
+
+/* Tooltip */
+.tooltip {
+  position: fixed; z-index: 1000; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 14px; box-shadow: var(--shadow);
+  pointer-events: none; max-width: 280px; font-size: 13px;
+  opacity: 0; transition: opacity 0.15s;
+}
+.tooltip.show { opacity: 1; }
+.tooltip-title { font-weight: 600; margin-bottom: 6px; color: var(--accent2); }
+.tooltip-task { padding: 3px 0; color: var(--text2); border-bottom: 1px solid var(--border); }
+.tooltip-task:last-child { border-bottom: none; }
+
+/* Task Cards */
+.task-list { display: flex; flex-direction: column; gap: 8px; }
+.task-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 16px; display: flex; align-items: center; gap: 12px; transition: all 0.15s;
+}
+.task-card:hover { border-color: var(--accent); transform: translateX(2px); }
+.task-card.completed { opacity: 0.5; }
+.task-card.overdue { border-left: 3px solid var(--red); }
+.task-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: var(--accent); }
+.task-content { flex: 1; }
+.task-title { font-size: 14px; font-weight: 500; }
+.task-title.completed { text-decoration: line-through; color: var(--text3); }
+.task-meta { font-size: 12px; color: var(--text2); margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; }
+.task-actions { display: flex; gap: 6px; }
+
+/* Chat Bot */
+.chat-container {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  display: flex; flex-direction: column; height: calc(100vh - 200px);
+}
+.chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.chat-message { display: flex; gap: 10px; max-width: 80%; animation: fadeIn 0.2s ease; }
+.chat-message.bot { align-self: flex-start; }
+.chat-message.user { align-self: flex-end; flex-direction: row-reverse; }
+.chat-avatar {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--accent);
+  display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; color: #fff;
+}
+.chat-bubble {
+  padding: 10px 14px; border-radius: 12px; background: var(--surface2);
+  border: 1px solid var(--border); font-size: 14px; line-height: 1.5;
+}
+.chat-message.user .chat-bubble { background: var(--accent); color: #fff; border-color: var(--accent); }
+.chat-input-container { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.chat-input {
+  flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface2); color: var(--text); font-size: 14px; outline: none;
+}
+.chat-input:focus { border-color: var(--accent); }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+  z-index: 100; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 24px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--shadow); transform: translateY(20px); transition: transform 0.2s;
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; }
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-size: 14px; font-family: var(--font); outline: none;
+}
+.form-group input:focus, .form-group textarea:focus { border-color: var(--accent); }
+.form-group textarea { min-height: 80px; resize: vertical; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 200;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 20px; font-size: 13px; font-weight: 500; box-shadow: var(--shadow);
+  transform: translateY(20px); opacity: 0; transition: all 0.3s;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: var(--green); }
+.toast.warning { border-color: var(--yellow); }
+
+/* FAB */
+.fab {
+  position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px;
+  border-radius: 50%; background: var(--accent); color: #fff; border: none;
+  font-size: 24px; cursor: pointer; box-shadow: 0 8px 24px rgba(99,102,241,0.4);
+  transition: all 0.2s; z-index: 50; display: flex; align-items: center; justify-content: center;
+}
+.fab:hover { transform: scale(1.1); }
+
+/* Session Cards */
+.session-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.15s;
+}
+.session-card:hover { border-color: var(--accent); transform: translateX(2px); }
+.session-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.session-title { font-weight: 600; font-size: 15px; }
+.session-date { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.session-stats { display: flex; gap: 12px; margin-top: 8px; font-size: 12px; color: var(--text3); }
+.session-details { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: none; font-size: 13px; color: var(--text2); line-height: 1.6; }
+.session-details.expanded { display: block; }
+.session-actions { margin-top: 12px; display: flex; gap: 8px; }
+
+/* Voice Button */
+.voice-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text2); cursor: pointer;
+  transition: all 0.15s; font-size: 16px; flex-shrink: 0;
+}
+.voice-btn:hover { border-color: var(--accent); color: var(--accent); }
+.voice-btn.listening { background: var(--red); border-color: var(--red); color: #fff; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); } }
+.input-with-voice { display: flex; gap: 8px; align-items: center; }
+.input-with-voice input { flex: 1; }
+
+/* Empty */
+.empty { text-align: center; padding: 48px 24px; color: var(--text3); }
+.empty .icon { font-size: 48px; margin-bottom: 12px; }
+.empty p { font-size: 14px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .week-grid { grid-template-columns: repeat(2,1fr); }
+  .year-grid { grid-template-columns: repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">✨ TaskMaster</div>
+    </div>
+    <div class="nav">
+      <div class="nav-section">
+        <div class="nav-section-title">Главное</div>
+        <div class="nav-item active" data-tab="calendar"><span class="icon">📅</span> Календарь дел</div>
+        <div class="nav-item" data-tab="tasks"><span class="icon">📝</span> Все задачи</div>
+        <div class="nav-item" data-tab="urgent"><span class="icon">⏰</span> Срочные</div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Интеграции</div>
+        <div class="nav-item" data-tab="mimo"><span class="icon">🤖</span> История MiMo</div>
+        <div class="nav-item" data-tab="chatbot"><span class="icon">🗣</span> Чат-бот</div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Инструменты</div>
+        <div class="nav-item" onclick="importWeeklyPlan()"><span class="icon">📋</span> Загрузить план</div>
+        <div class="nav-item" onclick="showImportModal()"><span class="icon">📥</span> Импорт из ИИ</div>
+        <div class="nav-item" onclick="exportData()"><span class="icon">📤</span> Экспорт</div>
+        <div class="nav-item" onclick="createBackup()"><span class="icon">💾</span> Бэкап</div>
+        <div class="nav-item" onclick="restoreBackup()"><span class="icon">📂</span> Восстановить</div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main">
+    <header class="header">
+      <div style="display:flex;align-items:center">
+        <h2 id="pageTitle">Календарь дел</h2>
+        <span class="header-time" id="headerTime"></span>
+      </div>
+      <button class="btn btn-primary" onclick="openTaskModal()">+ Задача</button>
+    </header>
+    <div class="content">
+      <div class="tab-content active" id="tab-calendar"></div>
+      <div class="tab-content" id="tab-tasks"></div>
+      <div class="tab-content" id="tab-urgent"></div>
+      <div class="tab-content" id="tab-mimo"></div>
+      <div class="tab-content" id="tab-chatbot"></div>
+    </div>
+  </div>
+</div>
+
+<button class="fab" onclick="openTaskModal()">+</button>
+
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-content"></div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== STATE ====================
+let tasks = [];
+let currentView = 'month';
+let currentDate = new Date();
+let currentTab = 'calendar';
+let tooltipTimer = null;
+let useAPI = false; // true если сервер доступен
+
+const API = '/api';
+// GitHub raw URL для чтения sessions.json с GitHub Pages
+// Замени taskmaster на имя своего репозитория
+const GITHUB_RAW = 'https://raw.githubusercontent.com/taskmaster/main/sessions.json';
+const DAYS_RU = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function fmtDate(d) { return d.toISOString().slice(0,10); }
+function isToday(d) { return fmtDate(d) === fmtDate(new Date()); }
+
+// ==================== API LAYER ====================
+async function loadTasks() {
+  try {
+    const r = await fetch(`${API}/tasks`);
+    if (r.ok) {
+      tasks = await r.json();
+      useAPI = true;
+      return;
+    }
+  } catch {}
+  // Fallback: localStorage
+  tasks = JSON.parse(localStorage.getItem('db_tasks') || '[]');
+  useAPI = false;
+}
+
+async function save() {
+  if (useAPI) {
+    try {
+      await fetch(`${API}/tasks`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(tasks) });
+    } catch {
+      localStorage.setItem('db_tasks', JSON.stringify(tasks));
+    }
+  } else {
+    localStorage.setItem('db_tasks', JSON.stringify(tasks));
+  }
+}
+
+async function loadSessions() {
+  // 1. Пробуем API сервера
+  try {
+    const r = await fetch(`${API}/sessions`);
+    if (r.ok) return await r.json();
+  } catch {}
+  // 2. Fallback: GitHub raw (для GitHub Pages)
+  try {
+    const r = await fetch(GITHUB_RAW);
+    if (r.ok) return await r.json();
+  } catch {}
+  // 3. Fallback: localStorage
+  try {
+    return JSON.parse(localStorage.getItem('db_sessions') || '[]');
+  } catch {}
+  return [];
+}
+
+async function loadPlan() {
+  try {
+    const r = await fetch(`${API}/plan`);
+    if (r.ok) return await r.text();
+  } catch {}
+  return '';
+}
+
+// ==================== WEEKLY PLAN ====================
+const MONTH_MAP = { 'января':0,'февраля':1,'марта':2,'апреля':3,'мая':4,'июня':5,'июля':6,'августа':7,'сентября':8,'октября':9,'ноября':10,'декабря':11 };
+
+function parseWeeklyPlan(text) {
+  const result = [];
+  const lines = text.split('\n');
+  let year = new Date().getFullYear();
+  let currentDate = null;
+
+  for (const line of lines) {
+    // Извлечь год из "Текущая неделя: 07-13 июля 2026"
+    const weekMatch = line.match(/Текущая неделя.*?(\d{4})/);
+    if (weekMatch) { year = parseInt(weekMatch[1]); continue; }
+
+    // Определить месяц из заголовка недели
+    const monthMatch = line.match(/Текущая неделя.*?(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)/i);
+    if (monthMatch) {
+      const monthNames = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+      const monthIdx = monthNames.indexOf(monthMatch[1].toLowerCase());
+      if (monthIdx >= 0) {
+        // Обновляем год если есть
+        if (weekMatch) year = parseInt(weekMatch[1]);
+      }
+      continue;
+    }
+
+    // Заголовок дня: "#### Понедельник (07.07)"
+    const dayMatch = line.match(/####\s+\S+\s*\((\d{2})\.(\d{2})\)/);
+    if (dayMatch) {
+      const day = parseInt(dayMatch[1]);
+      const month = parseInt(dayMatch[2]) - 1;
+      currentDate = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      continue;
+    }
+
+    // Задача: "- [x] text" или "- [ ] text"
+    if (currentDate) {
+      const taskMatch = line.match(/^- \[([ x])\]\s+(.+)/);
+      if (taskMatch) {
+        const done = taskMatch[1] === 'x';
+        const title = taskMatch[2].trim();
+        if (title.length >= 2) {
+          result.push({ title, date: currentDate, done });
+        }
+      }
+    }
+  }
+  return result;
+}
+
+async function importWeeklyPlan() {
+  const text = await loadPlan();
+  if (!text) { toast('План не найден', 'warning'); return; }
+
+  const parsed = parseWeeklyPlan(text);
+  if (!parsed.length) { toast('Не удалось распознать задачи', 'warning'); return; }
+
+  let added = 0;
+  for (const p of parsed) {
+    // Дедупликация
+    const exists = tasks.some(t => t.title === p.title && t.date === p.date);
+    if (exists) continue;
+
+    tasks.push({
+      id: genId(),
+      title: p.title,
+      note: '',
+      date: p.date,
+      type: '',
+      source: 'план на неделю',
+      done: p.done,
+      created: new Date().toISOString()
+    });
+    added++;
+  }
+
+  if (added) {
+    await save();
+    render();
+    toast(`Импортировано ${added} задач из плана`);
+  } else {
+    toast('Все задачи уже загружены');
+  }
+}
+
+// ==================== TIME ====================
+function updateTime() {
+  const now = new Date();
+  document.getElementById('headerTime').textContent = now.toLocaleDateString('ru-RU', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+}
+setInterval(updateTime, 1000);
+updateTime();
+
+// ==================== NAVIGATION ====================
+document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    currentTab = item.dataset.tab;
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + currentTab).classList.add('active');
+    const titles = { calendar: 'Календарь дел', tasks: 'Все задачи', urgent: 'Срочные задачи', mimo: 'История MiMo', chatbot: 'Чат-бот' };
+    document.getElementById('pageTitle').textContent = titles[currentTab] || 'TaskMaster';
+    render();
+  });
+});
+
+// ==================== CALENDAR ====================
+function render() {
+  if (currentTab === 'calendar') renderCalendar();
+  else if (currentTab === 'tasks') renderAllTasks();
+  else if (currentTab === 'urgent') renderUrgent();
+  else if (currentTab === 'mimo') renderMimo();
+  else if (currentTab === 'chatbot') renderChatbot();
+}
+
+function renderCalendar() {
+  const c = document.getElementById('tab-calendar');
+  let navHtml = '';
+  if (currentView === 'month') {
+    navHtml = `<button class="btn" onclick="currentDate.setMonth(currentDate.getMonth()-1);render()">←</button>
+      <span class="period-label">${MONTHS_RU[currentDate.getMonth()]} ${currentDate.getFullYear()}</span>
+      <button class="btn" onclick="currentDate.setMonth(currentDate.getMonth()+1);render()">→</button>`;
+  } else if (currentView === 'week') {
+    const ws = getWeekStart(currentDate);
+    const we = new Date(ws); we.setDate(we.getDate()+6);
+    navHtml = `<button class="btn" onclick="currentDate.setDate(currentDate.getDate()-7);render()">←</button>
+      <span class="period-label">${ws.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})} — ${we.toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'})}</span>
+      <button class="btn" onclick="currentDate.setDate(currentDate.getDate()+7);render()">→</button>`;
+  } else if (currentView === 'day') {
+    navHtml = `<button class="btn" onclick="currentDate.setDate(currentDate.getDate()-1);render()">←</button>
+      <span class="period-label">${currentDate.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span>
+      <button class="btn" onclick="currentDate.setDate(currentDate.getDate()+1);render()">→</button>`;
+  } else if (currentView === 'year') {
+    navHtml = `<button class="btn" onclick="currentDate.setFullYear(currentDate.getFullYear()-1);render()">←</button>
+      <span class="period-label">${currentDate.getFullYear()}</span>
+      <button class="btn" onclick="currentDate.setFullYear(currentDate.getFullYear()+1);render()">→</button>`;
+  }
+
+  let html = `<div class="calendar-controls">
+    <div class="view-toggle">
+      <button class="view-btn ${currentView==='month'?'active':''}" onclick="currentView='month';render()">Месяц</button>
+      <button class="view-btn ${currentView==='week'?'active':''}" onclick="currentView='week';render()">Неделя</button>
+      <button class="view-btn ${currentView==='day'?'active':''}" onclick="currentView='day';render()">День</button>
+      <button class="view-btn ${currentView==='year'?'active':''}" onclick="currentView='year';render()">Год</button>
+    </div>
+    <div class="period-nav">${navHtml}</div>
+    <button class="btn" onclick="currentDate=new Date();render()">Сегодня</button>
+  </div>`;
+
+  if (currentView === 'month') html += renderMonthView();
+  else if (currentView === 'week') html += renderWeekView();
+  else if (currentView === 'day') html += renderDayView();
+  else if (currentView === 'year') html += renderYearView();
+
+  c.innerHTML = html;
+}
+
+function renderMonthView() {
+  const y = currentDate.getFullYear(), m = currentDate.getMonth();
+  const first = new Date(y, m, 1), last = new Date(y, m+1, 0);
+  const startDay = (first.getDay() || 7) - 1;
+  const daysInMonth = last.getDate();
+  const today = new Date();
+
+  let html = `<div class="calendar-grid">
+    <div class="calendar-header">${DAYS_RU.map(d => `<div class="calendar-day-name">${d}</div>`).join('')}</div>
+    <div class="calendar-days">`;
+
+  for (let i = 0; i < startDay; i++) {
+    const d = new Date(y, m, -startDay+i+1), ds = fmtDate(d);
+    const dt = tasks.filter(t => t.date === ds);
+    html += `<div class="calendar-day other-month" onclick="showDayModal('${ds}')">
+      <div class="calendar-day-number">${d.getDate()}</div>
+      ${dt.length ? `<div class="calendar-day-dots">${dt.slice(0,3).map(t=>`<div class="dot${!t.done&&new Date(t.date)<today?' overdue':''}"></div>`).join('')}</div>` : ''}
+    </div>`;
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(y, m, d), ds = fmtDate(date);
+    const dt = tasks.filter(t => t.date === ds);
+    const todayCls = isToday(date) ? ' today' : '';
+    html += `<div class="calendar-day${todayCls}" onclick="showDayModal('${ds}')">
+      <div class="calendar-day-number">${d}</div>
+      ${dt.length ? `<div class="calendar-day-dots">${dt.slice(0,3).map(t=>`<div class="dot${!t.done&&new Date(t.date)<today?' overdue':''}"></div>`).join('')}</div>` : ''}
+    </div>`;
+  }
+  const remaining = 42 - (startDay + daysInMonth);
+  for (let i = 1; i <= remaining; i++) {
+    const d = new Date(y, m+1, i), ds = fmtDate(d);
+    const dt = tasks.filter(t => t.date === ds);
+    html += `<div class="calendar-day other-month" onclick="showDayModal('${ds}')">
+      <div class="calendar-day-number">${d.getDate()}</div>
+      ${dt.length ? `<div class="calendar-day-dots">${dt.slice(0,3).map(t=>`<div class="dot${!t.done&&new Date(t.date)<today?' overdue':''}"></div>`).join('')}</div>` : ''}
+    </div>`;
+  }
+  html += '</div></div>';
+  return html;
+}
+
+function renderWeekView() {
+  const ws = getWeekStart(currentDate);
+  const today = new Date();
+  let html = '<div class="week-grid">';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(ws); d.setDate(d.getDate()+i);
+    const ds = fmtDate(d);
+    const dt = tasks.filter(t => t.date === ds);
+    const todayCls = isToday(d) ? ' today' : '';
+    html += `<div class="week-day-card${todayCls}">
+      <div class="week-day-header">${DAYS_RU[i]} ${d.getDate()}</div>
+      ${dt.map(t => `<div class="week-task-item" onclick="editTask('${t.id}')">${t.done?'✓':'○'} ${esc(t.title)}</div>`).join('')}
+      ${!dt.length ? '<div style="font-size:12px;color:var(--text3);opacity:0.5">Нет задач</div>' : ''}
+    </div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderDayView() {
+  const ds = fmtDate(currentDate);
+  const dt = tasks.filter(t => t.date === ds);
+  let html = '<div class="day-task-list">';
+  if (dt.length) {
+    dt.forEach(t => { html += renderTaskCard(t); });
+  } else {
+    html += '<div class="empty"><div class="icon">📅</div><p>На этот день задач нет</p></div>';
+  }
+  html += `<div style="margin-top:16px"><button class="btn btn-primary" onclick="openTaskModal(null,'${ds}')">+ Добавить задачу</button></div>`;
+  html += '</div>';
+  return html;
+}
+
+function renderYearView() {
+  const y = currentDate.getFullYear();
+  const today = new Date();
+  let html = '<div class="year-grid">';
+  for (let m = 0; m < 12; m++) {
+    html += `<div class="month-card"><div class="month-card-header">${MONTHS_RU[m]}</div><div class="mini-grid">`;
+    ['П','В','С','Ч','П','С','В'].forEach(d => { html += `<div class="mini-day-header">${d}</div>`; });
+    const first = new Date(y, m, 1), last = new Date(y, m+1, 0);
+    const startDay = (first.getDay() || 7) - 1;
+    for (let i = 0; i < startDay; i++) html += '<div class="mini-day"></div>';
+    for (let d = 1; d <= last.getDate(); d++) {
+      const date = new Date(y, m, d), ds = fmtDate(date);
+      const dt = tasks.filter(t => t.date === ds);
+      const hasTasks = dt.length > 0;
+      const todayCls = isToday(date) ? ' today' : '';
+      html += `<div class="mini-day${hasTasks?' has-tasks':''}${todayCls}" data-date="${ds}"
+        onmouseenter="showTooltip(event,'${ds}')" onmouseleave="hideTooltip()"
+        onclick="currentDate=new Date('${ds}T00:00:00');currentView='day';render()">${d}</div>`;
+    }
+    html += '</div></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function getWeekStart(d) {
+  const dt = new Date(d);
+  const day = dt.getDay();
+  dt.setDate(dt.getDate() - (day === 0 ? 6 : day - 1));
+  return dt;
+}
+
+// ==================== TOOLTIP ====================
+function showTooltip(e, dateStr) {
+  clearTimeout(tooltipTimer);
+  const dt = tasks.filter(t => t.date === dateStr);
+  const tip = document.getElementById('tooltip');
+  const date = new Date(dateStr + 'T00:00:00');
+  let html = `<div class="tooltip-title">${date.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}</div>`;
+  if (dt.length) {
+    dt.forEach(t => { html += `<div class="tooltip-task">${t.done?'✓':'○'} ${esc(t.title)}</div>`; });
+  } else {
+    html += '<div class="tooltip-task" style="color:var(--text3)">Нет задач</div>';
+  }
+  tip.innerHTML = html;
+  tip.classList.add('show');
+  const rect = e.target.getBoundingClientRect();
+  tip.style.left = Math.min(rect.left, window.innerWidth - 290) + 'px';
+  tip.style.top = (rect.bottom + 8) + 'px';
+}
+function hideTooltip() {
+  clearTimeout(tooltipTimer);
+  tooltipTimer = setTimeout(() => { document.getElementById('tooltip').classList.remove('show'); }, 100);
+}
+
+// ==================== TASKS ====================
+function renderTaskCard(t) {
+  const overdue = !t.done && new Date(t.date) < new Date(new Date().toDateString());
+  return `<div class="task-card${t.done?' completed':''}${overdue?' overdue':''}">
+    <input type="checkbox" class="task-checkbox" ${t.done?'checked':''} onchange="toggleTask('${t.id}')">
+    <div class="task-content">
+      <div class="task-title${t.done?' completed':''}">${esc(t.title)}</div>
+      <div class="task-meta">
+        ${t.date ? `<span>📅 ${new Date(t.date).toLocaleDateString('ru-RU')}</span>` : ''}
+        ${t.type ? `<span>🏷 ${t.type}</span>` : ''}
+        ${t.source ? `<span>📂 ${esc(t.source)}</span>` : ''}
+      </div>
+    </div>
+    <div class="task-actions">
+      <button class="btn btn-sm" onclick="editTask('${t.id}')">✏️</button>
+      <button class="btn btn-sm" onclick="deleteTask('${t.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+
+function renderAllTasks() {
+  const c = document.getElementById('tab-tasks');
+  const sorted = [...tasks].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  let html = '';
+  if (sorted.length) {
+    html = '<div class="task-list">' + sorted.map(t => renderTaskCard(t)).join('') + '</div>';
+  } else {
+    html = '<div class="empty"><div class="icon">📝</div><p>Нет задач</p></div>';
+  }
+  c.innerHTML = html;
+}
+
+function renderUrgent() {
+  const c = document.getElementById('tab-urgent');
+  const now = new Date();
+  const today = fmtDate(now);
+  const tomorrow = fmtDate(new Date(now.getTime() + 86400000));
+  const urgent = tasks.filter(t => !t.done && (t.date === today || t.date === tomorrow));
+  let html = '';
+  if (urgent.length) {
+    html = '<div class="task-list">' + urgent.map(t => {
+      const isTodayTask = t.date === today;
+      return `<div class="task-card overdue">
+        <input type="checkbox" class="task-checkbox" onchange="toggleTask('${t.id}')">
+        <div class="task-content">
+          <div class="task-title">${esc(t.title)}</div>
+          <div class="task-meta">
+            <span style="color:${isTodayTask?'var(--red)':'var(--yellow)'}">${isTodayTask?'🔴 Сегодня':'🟡 Завтра'}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+  } else {
+    html = '<div class="empty"><div class="icon">✅</div><p>Нет срочных задач</p></div>';
+  }
+  c.innerHTML = html;
+}
+
+function toggleTask(id) {
+  const t = tasks.find(x => x.id === id);
+  if (t) { t.done = !t.done; save(); render(); }
+}
+function deleteTask(id) {
+  if (!confirm('Удалить задачу?')) return;
+  tasks = tasks.filter(x => x.id !== id);
+  save(); render(); toast('Задача удалена');
+}
+function editTask(id) {
+  const t = tasks.find(x => x.id === id);
+  if (t) openTaskModal(t);
+}
+
+// ==================== DAY MODAL ====================
+function showDayModal(dateStr) {
+  const dt = tasks.filter(t => t.date === dateStr);
+  const date = new Date(dateStr + 'T00:00:00');
+  let html = `<h3>📋 ${date.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}</h3>`;
+  if (dt.length) {
+    html += '<div class="task-list">' + dt.map(t => renderTaskCard(t)).join('') + '</div>';
+  } else {
+    html += '<div class="empty"><p>Нет задач</p></div>';
+  }
+  html += `<div style="margin-top:16px;display:flex;gap:8px">
+    <button class="btn btn-primary" onclick="closeModal();openTaskModal(null,'${dateStr}')">+ Задача</button>
+    <button class="btn" onclick="closeModal()">Закрыть</button>
+  </div>`;
+  openModal(html);
+}
+
+// ==================== MODAL ====================
+function openModal(html) {
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+function openTaskModal(edit = null, presetDate = null) {
+  const html = `<h3>${edit ? 'Редактировать' : 'Новая задача'}</h3>
+    <div class="form-group">
+      <label>Название</label>
+      <div class="input-with-voice">
+        <input id="f-title" value="${edit ? esc(edit.title) : ''}" placeholder="Что нужно сделать?">
+        <button type="button" class="voice-btn" onclick="startModalVoiceInput()" title="Голосовой ввод">🎤</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Заметка</label>
+      <textarea id="f-note" placeholder="Детали...">${edit ? esc(edit.note||'') : ''}</textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Дата</label>
+        <input type="date" id="f-date" value="${edit ? edit.date : (presetDate || fmtDate(new Date()))}">
+      </div>
+      <div class="form-group">
+        <label>Тип</label>
+        <select id="f-type">
+          <option value="online" ${edit&&edit.type==='online'?'selected':''}>Онлайн</option>
+          <option value="offline" ${edit&&edit.type==='offline'?'selected':''}>Офлайн</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Источник</label>
+      <input id="f-source" value="${edit ? esc(edit.source||'') : ''}" placeholder="Откуда задача?">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveTask('${edit?edit.id:''}')">${edit?'Сохранить':'Добавить'}</button>
+    </div>`;
+  openModal(html);
+  setTimeout(() => document.getElementById('f-title').focus(), 100);
+}
+
+function saveTask(editId) {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) return;
+  const data = {
+    title,
+    note: document.getElementById('f-note').value.trim(),
+    date: document.getElementById('f-date').value,
+    type: document.getElementById('f-type').value,
+    source: document.getElementById('f-source').value.trim()
+  };
+  if (editId) {
+    const t = tasks.find(x => x.id === editId);
+    if (t) Object.assign(t, data);
+  } else {
+    tasks.push({ id: genId(), ...data, done: false, created: new Date().toISOString() });
+  }
+  closeModal(); save(); render();
+  toast(editId ? 'Задача обновлена' : 'Задача добавлена');
+}
+
+// ==================== IMPORT ====================
+function showImportModal() {
+  openModal(`<h3>📥 Импорт из ИИ</h3>
+    <div class="form-group">
+      <label>Текст</label>
+      <textarea id="import-text" style="min-height:180px" placeholder="- Задача 1&#10;- Задача 2&#10;- Задача 3"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Или загрузите файл</label>
+      <input type="file" id="import-file" accept=".md,.txt,.json" onchange="loadImportFile()" style="font-size:13px;color:var(--text2)">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="doImport()">Импортировать</button>
+    </div>`);
+}
+
+function loadImportFile() {
+  const f = document.getElementById('import-file').files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = e => { document.getElementById('import-text').value = e.target.result; };
+  r.readAsText(f);
+}
+
+function doImport() {
+  const text = document.getElementById('import-text').value.trim();
+  if (!text) { toast('Вставьте текст', 'warning'); return; }
+  let count = 0;
+  const today = fmtDate(new Date());
+  text.split('\n').filter(l => l.trim()).forEach(line => {
+    const clean = line.replace(/^[-*•]\s*/, '').replace(/^#+\s*/, '').trim();
+    if (!clean || clean.length < 3) return;
+    tasks.push({ id: genId(), title: clean, note: '', date: today, type: '', source: 'импорт из ИИ', done: false, created: new Date().toISOString() });
+    count++;
+  });
+  closeModal();
+  if (count) { save(); render(); toast(`Импортировано ${count} задач`); }
+  else toast('Не удалось распознать задачи', 'warning');
+}
+
+// ==================== EXPORT / BACKUP ====================
+function exportData() {
+  const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `tasks_${fmtDate(new Date())}.json`;
+  a.click(); toast('Экспорт завершён');
+}
+
+function createBackup() {
+  const blob = new Blob([JSON.stringify({ tasks, exported: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `backup_${fmtDate(new Date())}.json`;
+  a.click(); toast('Бэкап создан');
+}
+
+function restoreBackup() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.tasks && Array.isArray(data.tasks)) tasks = data.tasks;
+        else if (Array.isArray(data)) tasks = data;
+        save(); render(); toast(`Восстановлено ${tasks.length} задач`);
+      } catch { toast('Ошибка: файл повреждён', 'warning'); }
+    };
+    r.readAsText(f);
+  };
+  input.click();
+}
+
+// ==================== MIMO HISTORY ====================
+let sessionsCache = JSON.parse(localStorage.getItem('cached_sessions') || '[]');
+
+function renderMimo() {
+  const c = document.getElementById('tab-mimo');
+  let html = `<div style="margin-bottom:16px;display:flex;gap:8px">
+    <button class="btn btn-primary" onclick="syncMimo()">🔄 Синхронизировать</button>
+    <button class="btn" onclick="importSessionsJSON()">📥 Импорт JSON</button>
+  </div>`;
+  if (sessionsCache.length) {
+    html += `<div style="font-size:13px;color:var(--text2);margin-bottom:16px">${sessionsCache.length} сессий</div>`;
+    sessionsCache.forEach((s, i) => {
+      html += `<div class="session-card">
+        <div class="session-header" onclick="this.parentElement.querySelector('.session-details').classList.toggle('expanded')">
+          <div>
+            <div class="session-title">${esc(s.topic || 'Без темы')}</div>
+            <div class="session-date">${s.timestamp ? new Date(s.timestamp).toLocaleDateString('ru-RU') : ''}</div>
+          </div>
+        </div>
+        <div class="session-stats">
+          ${s.files_count ? `<span>📁 ${s.files_count} файлов</span>` : ''}
+          ${s.learnings && s.learnings.length ? `<span>💡 ${s.learnings.length} находок</span>` : ''}
+          ${s.errors && s.errors.length ? `<span>⚠️ ${s.errors.length} ошибок</span>` : ''}
+        </div>
+        <div class="session-details">
+          ${s.next_action ? `<p><b>Следующий шаг:</b> ${esc(s.next_action)}</p>` : ''}
+          ${s.learnings && s.learnings.length ? `<p style="margin-top:8px"><b>Находки:</b> ${s.learnings.slice(0,3).map(l => esc(l)).join('; ')}</p>` : ''}
+        </div>
+        <div class="session-actions">
+          <button class="btn btn-sm btn-primary" onclick="addTaskFromSession(${i})">📅 Добавить в календарь</button>
+        </div>
+      </div>`;
+    });
+  } else {
+    html += '<div class="empty"><div class="icon">🤖</div><p>Нет данных. Нажмите «Синхронизировать» или импортируйте JSON.</p></div>';
+  }
+  c.innerHTML = html;
+}
+
+async function syncMimo() {
+  toast('Синхронизация...');
+  try {
+    const r = await fetch(`${API}/sync`, { method: 'POST' });
+    if (r.ok) {
+      sessionsCache = await r.json();
+      localStorage.setItem('cached_sessions', JSON.stringify(sessionsCache));
+      render();
+      toast(`Обновлено: ${sessionsCache.length} сессий`);
+      return;
+    }
+  } catch {}
+  toast('Сервер недоступен', 'warning');
+}
+
+function importSessionsJSON() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        sessionsCache = Array.isArray(data) ? data : [data];
+        localStorage.setItem('cached_sessions', JSON.stringify(sessionsCache));
+        render();
+        toast(`Импортировано ${sessionsCache.length} сессий`);
+      } catch { toast('Ошибка: файл повреждён', 'warning'); }
+    };
+    r.readAsText(f);
+  };
+  input.click();
+}
+
+function addTaskFromSession(index) {
+  const s = sessionsCache[index];
+  if (!s) return;
+  const title = s.next_action || s.topic || 'Задача из сессии';
+  const date = s.timestamp ? fmtDate(new Date(s.timestamp)) : fmtDate(new Date());
+  tasks.push({ id: genId(), title, note: '', date, type: '', source: 'MiMo сессия', done: false, created: new Date().toISOString() });
+  save();
+  toast('Задача добавлена в календарь');
+}
+
+// ==================== CHATBOT ====================
+let chatHistory = [];
+let chatInitialized = false;
+let recognition = null;
+const synthesis = window.speechSynthesis;
+
+function renderChatbot() {
+  const c = document.getElementById('tab-chatbot');
+  c.innerHTML = `
+    <div class="chat-container">
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-container">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Введите команду..." onkeypress="if(event.key==='Enter')sendChat()">
+        <button class="voice-btn" id="chatVoiceBtn" onclick="startChatVoiceInput()" title="Голос">🎤</button>
+        <button class="btn btn-primary" onclick="sendChat()">📨</button>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn" onclick="speakTodayTasks()">🔊 Озвучить задачи</button>
+    </div>`;
+
+  if (!chatInitialized) {
+    chatInitialized = true;
+    addBotMessage('Привет! Я твой помощник по задачам. Скажи «задачи» чтобы услышать список, или «выполнил [название]».');
+  }
+  renderChatHistory();
+}
+
+function addBotMessage(text) {
+  chatHistory.push({ type: 'bot', text, time: new Date().toISOString() });
+  renderChatHistory();
+  speak(text);
+}
+
+function addUserMessage(text) {
+  chatHistory.push({ type: 'user', text, time: new Date().toISOString() });
+  renderChatHistory();
+}
+
+function renderChatHistory() {
+  const el = document.getElementById('chatMessages');
+  if (!el) return;
+  el.innerHTML = chatHistory.map(m => `
+    <div class="chat-message ${m.type}">
+      <div class="chat-avatar">${m.type === 'bot' ? '🤖' : '👤'}</div>
+      <div class="chat-bubble">${esc(m.text)}</div>
+    </div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addUserMessage(text);
+
+  const lower = text.toLowerCase();
+  if (lower.includes('задач') || lower.includes('список')) {
+    speakTodayTasks();
+  } else if (lower.includes('привет') || lower.includes('здравствуй')) {
+    addBotMessage('Привет! Чем могу помочь?');
+  } else if (lower.includes('пока') || lower.includes('до свидания')) {
+    addBotMessage('До встречи! Удачи!');
+  } else if (lower.includes('выполнил') || lower.includes('готово')) {
+    const taskName = text.replace(/выполнил|готово/gi, '').trim();
+    const today = fmtDate(new Date());
+    const task = tasks.find(t => t.date === today && !t.done && t.title.toLowerCase().includes(taskName.toLowerCase()));
+    if (task) {
+      task.done = true; save(); render();
+      addBotMessage(`Отлично! Задача «${task.title}» выполнена!`);
+    } else {
+      addBotMessage('Не нашёл такую задачу на сегодня. Уточни название.');
+    }
+  } else {
+    addBotMessage('Скажи «задачи» чтобы услышать список, или «выполнил [название]».');
+  }
+}
+
+function speak(text) {
+  if (!synthesis) return;
+  synthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ru-RU'; u.rate = 1.0; u.pitch = 1.2;
+  const voices = synthesis.getVoices();
+  const female = voices.find(v => v.lang.startsWith('ru') && v.name.toLowerCase().includes('female'));
+  if (female) u.voice = female;
+  synthesis.speak(u);
+}
+
+function speakTodayTasks() {
+  const today = fmtDate(new Date());
+  const todayTasks = tasks.filter(t => t.date === today && !t.done);
+  if (!todayTasks.length) {
+    addBotMessage('На сегодня нет задач!');
+    return;
+  }
+  addBotMessage(`На сегодня ${todayTasks.length} задач:`);
+  todayTasks.forEach((t, i) => {
+    setTimeout(() => { addBotMessage(`${i+1}. ${t.title}`); }, i * 800);
+  });
+}
+
+// ==================== VOICE INPUT ====================
+function startModalVoiceInput() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    toast('Голосовой ввод не поддерживается', 'warning'); return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'ru-RU';
+  const btn = document.querySelector('.input-with-voice .voice-btn');
+  btn.classList.add('listening');
+  recognition.onresult = e => {
+    document.getElementById('f-title').value = e.results[0][0].transcript;
+    btn.classList.remove('listening');
+  };
+  recognition.onerror = () => btn.classList.remove('listening');
+  recognition.onend = () => btn.classList.remove('listening');
+  recognition.start();
+}
+
+function startChatVoiceInput() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    toast('Голосовой ввод не поддерживается', 'warning'); return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'ru-RU';
+  const btn = document.getElementById('chatVoiceBtn');
+  btn.classList.add('listening');
+  recognition.onresult = e => {
+    document.getElementById('chatInput').value = e.results[0][0].transcript;
+    btn.classList.remove('listening');
+    sendChat();
+  };
+  recognition.onerror = () => btn.classList.remove('listening');
+  recognition.onend = () => btn.classList.remove('listening');
+  recognition.start();
+}
+
+// ==================== REMINDERS ====================
+function checkReminders() {
+  const now = new Date();
+  const h = now.getHours(), m = now.getMinutes();
+  if ((h === 9 && m === 0) || (h === 11 && m === 30)) {
+    const key = `reminder_${h}_${m}_${fmtDate(now)}`;
+    if (!localStorage.getItem(key)) {
+      localStorage.setItem(key, '1');
+      const today = fmtDate(now);
+      const pending = tasks.filter(t => t.date === today && !t.done);
+      if (pending.length) {
+        const text = h === 9 ? `Доброе утро! У тебя ${pending.length} задач на сегодня.` : `Не забудь про задачи! Осталось ${pending.length}.`;
+        speak(text);
+      }
+    }
+  }
+}
+setInterval(checkReminders, 60000);
+
+// ==================== TOAST ====================
+function toast(text, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = text; el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ==================== HOTKEYS ====================
+document.addEventListener('keydown', e => {
+  if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) {
+    e.preventDefault(); openTaskModal();
+  }
+  if (e.key === 'Escape') closeModal();
+});
+
+// ==================== PWA ====================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js')
+    .then(reg => console.log('SW registered:', reg.scope))
+    .catch(err => console.log('SW failed:', err));
+}
+
+window.addEventListener('online', () => toast('Онлайн — синхронизация...', 'success'));
+window.addEventListener('offline', () => toast('Офлайн — данные сохраняются локально', 'warning'));
+
+// ==================== SEED DATA (для первого запуска без сервера) ====================
+const SEED_TASKS = [
+  {"id":"mrb3ab5ap1qm","title":"Дашборд: автосинхронизация сессий MiMo Code","note":"","date":"2026-07-07","type":"","source":"план на неделю","done":true,"created":"2026-07-07T20:16:20.974Z"},
+  {"id":"mrb3ab5a6j0a","title":"Дашборд: кнопка \"Синхронизировать\" работает из браузера","note":"","date":"2026-07-07","type":"","source":"план на неделю","done":true,"created":"2026-07-07T20:16:20.974Z"},
+  {"id":"mrb3ab5a26kq","title":"☎️ Позвонить насчёт газа","note":"","date":"2026-07-08","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.974Z"},
+  {"id":"mrb3ab5bhvcn","title":"☎️ Позвонить насчёт штукатурки, решить вопрос","note":"","date":"2026-07-08","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"},
+  {"id":"mrb3ab5btrw5","title":"🔨 Начать делать каркасы для забора","note":"","date":"2026-07-08","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"},
+  {"id":"mrb3ab5b3865","title":"VK-бот: заготовить шаблоны постов (интерфейс + структура)","note":"","date":"2026-07-08","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"},
+  {"id":"mrb3ab5bytw3","title":"VK-бот: написать логику генерации по шаблону","note":"","date":"2026-07-08","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"},
+  {"id":"mrb3ab5b1t6g","title":"VK-бот: тест генерации на 3 шаблонах","note":"","date":"2026-07-09","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"},
+  {"id":"mrb3ab5bgw31","title":"VK-бот: настроить автопубликацию (расписание + таймер)","note":"","date":"2026-07-09","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"},
+  {"id":"mrb3ab5bj1yv","title":"Дашборд: добавить планировщик (минимальный)","note":"","date":"2026-07-09","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"},
+  {"id":"mrb3ab5bbh89","title":"VK-бот: шаблоны контента — «Совет дня»","note":"","date":"2026-07-10","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"},
+  {"id":"mrb3ab5bdfbo","title":"VK-бот: шаблоны контента — «Кейс»","note":"","date":"2026-07-10","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"},
+  {"id":"mrb3ab5b9qvs","title":"VK-бот: шаблоны контента — «Вопрос дня»","note":"","date":"2026-07-10","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"},
+  {"id":"mrb3ab5bwxux","title":"VK-бот: тест автопубликации (запуск + проверка)","note":"","date":"2026-07-11","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"},
+  {"id":"mrb3ab5bv1je","title":"VK-бот: баг-фикс по результатам теста","note":"","date":"2026-07-11","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"},
+  {"id":"mrb3ab5bmvf4","title":"Ретроспектива недели + обновление дорожной карты","note":"","date":"2026-07-11","type":"","source":"план на неделю","done":false,"created":"2026-07-07T20:16:20.975Z"}
+];
+
+// ==================== INIT ====================
+(async () => {
+  await loadTasks();
+  // Если задач нет (первый запуск без сервера) — загружаем seed-данные
+  if (!tasks.length) {
+    tasks = SEED_TASKS;
+    localStorage.setItem('db_tasks', JSON.stringify(tasks));
+  }
+  render();
+})();
+</script>
+</body>
+</html>
