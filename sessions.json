@@ -1,22 +1,27 @@
 [
   {
-    "topic": "Деплой дашборда на Netlify + seed data для пустого localStorage",
-    "active_intent": "все работает сделал потом ссылку дам еще не работает не видит задачи и историю",
-    "next_action": "Перезалить `dashboard/deploy.zip` на Netlify — обновлённый пакет содержит SEED_TASKS (16 задач) встроенных в index.html. При первом открытии задачи появятся автоматически. Пользователь обещал дать ссылку.",
-    "current_work": "_Description of what was being done immediately before this checkpoint. Mention specific file paths and code locations._\n\n**Деплой дашборда на Netlify — развёрнут, но пустые данные:**\n\n1. **Создан deploy-пакет:** `dashboard/deploy/` содержит `index.html`, `manifest.json`, `sw.js`, `_redirects`\n2. **Инструкция:** `dashboard/ИНСТРУКЦИЯ-NETLIFY.md` — пошаговая (регистрация через Google/GitHub → загрузка папки)\n3. **Пользователь задеплоил** — всё работает, но задачи и история не отображаются\n4. **Ис",
+    "topic": "Ручная синхронизация дашборда — кнопка вместо cron",
+    "active_intent": "а может автоматически не надо пусть будет по моему нажатию допустим на кнопку синхронизации или еще как то или так нельзя",
+    "next_action": "Модифицировать server.py — чтобы POST `/api/sync` запускал sync_sessions.py + git push, и в дашборде была кнопка «Синхронизировать», которая вызывает этот endpoint.",
+    "current_work": "**Переключение с автоматической (cron) на ручную синхронизацию:**\n\n1. **Cron удалён** — `echo \"\" | crontab -` — cron-задача `*/5 * * * *` удалена\n2. **Следующий шаг:** модифицировать `dashboard/server.py` — POST `/api/sync` должен запускать `sync_sessions.py` + git push (а не просто сохранять JSON)\n3. **В дашборде:** добавить кнопку «Синхронизировать» в интерфейс, которая вызывает `/api/sync`\n4. **Результат:** пользователь нажимает кнопку → sync_sessions.py запускается → git push → GitHub Pages ",
     "files_touched": [
-      "dashboard/deploy/index.html",
-      "dashboard/deploy/",
-      "dashboard/deploy.zip",
-      "dashboard/ИНСТРУКЦИЯ-NETLIFY.md",
-      "dashboard/data/tasks.json"
+      "dashboard/index.html",
+      "dashboard/sync_sessions.py",
+      "dashboard/server.py",
+      "dashboard/sync_config.json",
+      "dashboard/deploy/index.html"
     ],
-    "learnings": [],
+    "learnings": [
+      "**GITHUB_RAW путь:** если репозиторий содержит папку dashboard/, URL должен быть `.../main/dashboard/sessions.json` (не `.../main/sessions.json`). Иначе 404.",
+      "**loadSessions fallback chain:** API сервера → GitHub raw (GITHUB_RAW) → localStorage. Работает на GitHub Pages без сервера.",
+      "**Cron в WSL работает:** `service cron status`, `crontab -e`. Удалён по запросу пользователя.",
+      "**sync_sessions.py — 3 sinks:** (1) локальный sessions.json, (2) git commit+push, (3) POST на удалённый сервер."
+    ],
     "errors": [
-      "**Задачи не отображаются на Netlify** — Netlify статический, API не работает, localStorage пуст. Исправлено: встроен SEED_TASKS в deploy/index.html, INIT-блок загружает seed при пустом localStorage."
+      "**GITHUB_RAW 404** — URL указывал в корень репозитория, файл в `dashboard/sessions.json`. Исправлено: добавлен `/dashboard/` в путь."
     ],
     "id": "ses_0bf81b7ceffe5jN2vh8kBRDnSR",
-    "timestamp": "2026-07-08T14:02:57.109970",
+    "timestamp": "2026-07-08T22:02:56.979180",
     "files_count": 5
   },
   {
