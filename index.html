@@ -358,6 +358,7 @@ const API = '/api';
 // GitHub raw URL для чтения sessions.json с GitHub Pages
 // Замени taskmaster на имя своего репозитория
 const GITHUB_RAW = 'https://raw.githubusercontent.com/unicompact-stack/taskmaster/main/sessions.json';
+const GITHUB_PLAN = 'https://raw.githubusercontent.com/unicompact-stack/taskmaster/main/data/weekly-plan.md';
 const DAYS_RU = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
@@ -412,8 +413,14 @@ async function loadSessions() {
 }
 
 async function loadPlan() {
+  // 1. Пробуем API сервера
   try {
     const r = await fetch(`${API}/plan`);
+    if (r.ok) return await r.text();
+  } catch {}
+  // 2. Fallback: GitHub raw
+  try {
+    const r = await fetch(GITHUB_PLAN + '?t=' + Date.now());
     if (r.ok) return await r.text();
   } catch {}
   return '';
