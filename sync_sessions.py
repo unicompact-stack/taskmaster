@@ -15,10 +15,19 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 
-# Проверяем оба пути: WSL и Windows
+# Проверяем все возможные пути: WSL, Windows, WSL через Windows
 _wsl_path = Path("/home/usermimo/.local/share/mimocode/memory/sessions")
 _win_path = Path.home() / ".local/share/mimocode/memory/sessions"
-SESSIONS_DIR = _wsl_path if _wsl_path.exists() else _win_path
+_wsl_unc = Path("//wsl.localhost/Ubuntu/home/usermimo/.local/share/mimocode/memory/sessions")
+
+if _wsl_path.exists():
+    SESSIONS_DIR = _wsl_path
+elif _win_path.exists():
+    SESSIONS_DIR = _win_path
+elif _wsl_unc.exists():
+    SESSIONS_DIR = _wsl_unc
+else:
+    SESSIONS_DIR = _wsl_path  # fallback
 OUTPUT_FILE = Path(__file__).parent / "sessions.json"
 CONFIG_FILE = Path(__file__).parent / "sync_config.json"
 REPO_DIR = Path(__file__).parent
