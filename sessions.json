@@ -1,28 +1,68 @@
 [
   {
-    "topic": "Настройка GitHub-синхронизации, дашборда и плана на неделю",
-    "active_intent": "Так давай дальше пойдём не видит план на неделю в чём дело то есть как он работает но в нашей ситуации",
-    "next_action": "Исправление `loadPlan()` в `dashboard/index.html` — добавить fallback на GitHub raw URL (GITHUB_PLAN), аналогично loadSessions(). Пуш в GitHub.\n\n> \"не видит план на неделю в чём дело\"",
-    "current_work": "**Фикс плана на неделю в дашборде:**\n\n1. `loadPlan()` обращался к `/api/plan` → на GitHub Pages сервера нет → пустой результат\n2. Найдено: `data/weekly-plan.md` есть на GitHub raw\n3. Добавлен `GITHUB_PLAN` константа в `dashboard/index.html`\n4. `loadPlan()` обновлён: сначала API → fallback на GitHub raw → localStorage\n5. Ожидание: пуш изменений в GitHub",
+    "topic": "Мобильная навигация дашборда — bottom nav не работает на телефоне",
+    "active_intent": "проверил все так же пока но если переключиться на пк версию то тогда все видно",
+    "next_action": "Разобраться почему `.mobile-nav` не отображается на телефоне несмотря на то что CSS и HTML добавлены и задеплоены (curl показывает 14 вхождений \"mobile-nav\"). Возможные причины: (1) кэш PWA/service worker отдаёт старую версию, (2) CSS `display: none !important` перебивает mobile-nav, (3) `position: ",
+    "current_work": "**Мобильная навигация — проблема НЕ решена:**\n\nВ прошлом checkpoint агент добавил:\n1. CSS: `.mobile-nav` с `display: none !important` для desktop, `display: flex !important` в `@media (max-width: 768px)`\n2. HTML: нижняя панель с 5 вкладками (Календарь, Задачи, Срочные, MiMo, Чат)\n3. JS: обработчики кликов для `.mobile-nav-item`\n4. Задеплоено в GitHub (commit `8cf379a`)\n\nНо пользователь проверил на телефоне — **не работает**. Видна только вкладка «Календарь дел». На десктопной версии всё ок.\n\n**Ч",
     "files_touched": [
       "dashboard/index.html",
-      "dashboard/data/weekly-plan.md",
-      "dashboard/auto_sync.py",
-      "dashboard/start_sync.bat"
+      "dashboard/ИНСТРУКЦИЯ-МОБИЛЬНАЯ.md",
+      "dashboard/sync_sessions.py"
     ],
     "learnings": [
-      "**loadPlan() fallback:** на GitHub Pages API недоступен. Нужен fallback: API → GitHub raw (GITHUB_PLAN) → localStorage. Аналогичный паттерн что и loadSessions().",
-      "**weekly-plan.md на GitHub:** файл доступен через raw.githubusercontent.com. Формат: markdown с заголовками дней `#### День (ДД.ММ)` и чекбоксами `- [ ] задача`.",
-      "**Cron vs auto_sync.py (простыми словами):** cron = будильник (настроил один раз, работает сам). auto_sync.py = скрипт (запускай каждый раз вручную). Cron надёжнее."
+      "**Мобильный CSS: `display: none` → `display: flex !important` переключается в `@media (max-width: 768px)`.** HTML и CSS добавлены, задеплоены, но **не работают на реальном телефоне**. Причина пока не ",
+      "**PWA service worker кэширует index.html.** Старая версия может отдаваться из кэша. Нужно: (а) обновить SW с новым версионированием cache name, (б) добавить `clients.claim()` для немедленного перехват",
+      "**Нижний padding `padding-bottom: 70px` на `.main` нужен** чтобы контент не заслонялся фиксированной нижней панелью — но это не решает проблему видимости самой панели."
     ],
     "errors": [
-      "**GITHUB_RAW 404 (ранее):** URL указывал `.../main/dashboard/sessions.json`, файлы в корне. Исправлено: `.../main/sessions.json`",
-      "**Git push rejected (ранее):** remote содержит файлы от ручной загрузки. Исправлено: `git push --force`",
-      "**План на неделю не отображался:** `loadPlan()` обращался к `/api/plan` → на GitHub Pages нет сервера → пустой результат. Исправление: fallback на GITHUB_PLAN."
+      "**Мобильная навигация не отображается на телефоне после деплоя:** CSS/HTML добавлены, curl подтверждает наличие в deployed, но на телефоне не видно. Ещё не исправлено. Требуется: (1) инвалидировать "
     ],
     "id": "ses_0bf81b7ceffe5jN2vh8kBRDnSR",
-    "timestamp": "2026-07-09T09:17:02.696592",
-    "files_count": 4
+    "timestamp": "2026-07-09T23:33:44.553687",
+    "files_count": 3
+  },
+  {
+    "topic": "Реорганизация структуры проекта — связывание CLAUDE.md + архивирование лишних файлов",
+    "active_intent": "да добавь и учти что должна быть локального потом взаимосвязь с глобальным и учти что везде свои связи должны быть и возьми за пример как должно быть и остально можешь в архив пока отправить что счита",
+    "next_action": "Реорганизация завершена. План выполнен полностью (7/7 шагов). Пользователь тестирует/подтверждает результат. Возможные следующие шаги:\n- Проверить что CLAUDE.md роутинг корректно работает (агент читает нужные файлы)\n- Добавить `data/weekly-plan.md` в `commit()` в auto_sync.py (запрос пользователя от",
+    "current_work": "_Description of what was being done immediately before this checkpoint. Mention specific file paths and code locations._\n\n**План реорганизации выполнен полностью (7/7 шагов).**",
+    "files_touched": [
+      "CLAUDE.md",
+      "bot-novichkam/CLAUDE.md",
+      "dashboard/CLAUDE.md",
+      "plans/2026-07-09-restructure-claudemd.md",
+      "archive/",
+      "archive/рабочие-данные/таблицы/"
+    ],
+    "learnings": [
+      "**Паттерн связывания CLAUDE.md:** каждый локальный CLAUDE.md содержит секцию `## Контекст проекта` с относительной ссылкой `../CLAUDE.md`. Единый формат для всех подпапок проекта.",
+      "**Архивация вместо удаления:** пользователь подтвердил правило — мусор/дубликаты/лишнее → `archive/`, не удалять. Это уже в MEMORY.md как правило.",
+      "**`таблицы/` — рабочие данные ЖБИ:** папка содержала чертёжные Excel-таблицы и Python-скрипты для их генерации. Относится к профессии пользователя (проектировщик монолитных домов), не к базе знаний по"
+    ],
+    "errors": [],
+    "id": "ses_0c9c777a9ffevlVrlY68cvDomb",
+    "timestamp": "2026-07-09T23:23:23.601059",
+    "files_count": 6
+  },
+  {
+    "topic": "Дашборд v3 — дизайн по LinkMatch + синхронизация и импорт/экспорт",
+    "active_intent": "в целом всё нормально но не Пока непонятно как работает синхронизация история Мема чата там ничего не работает подумай ещё раз а также вообще в принципе непонятно как всё работает то есть импорт-экспо",
+    "next_action": "Расследование проблемы синхронизации начато: `sync_sessions.py` работает (17 сессий синхронизировано), `sessions.json` существует (39KB). Нужно проверить почему кнопка \"Синхронизировать\" в дашборде не подгружает данные — возможно проблема с загрузкой `sessions.json` через fetch (CORS/file://).",
+    "current_work": "_Description of what was being done immediately before this checkpoint. Mention specific file paths and code locations._\n\n**Расследование неработающей синхронизации:**\n\nПользователь сообщил через voice-output.txt что синхронизация истории MiMo не работает и импорт/экспорт непонятен. Начата проверка:\n\n1. `sessions.json` существует (39KB, `dashboard/sessions.json`)\n2. `sync_sessions.py` работает — синхронизировал 17 сессий\n3. Кнопка \"Синхронизировать\" в `index.html:874` вызывает `syncSessions()` (",
+    "files_touched": [
+      "dashboard/index.html",
+      "dashboard/sync_sessions.py",
+      "dashboard/sessions.json",
+      "dashboard/ИНСТРУКЦИЯ.txt",
+      "voice-output.txt"
+    ],
+    "learnings": [],
+    "errors": [
+      "(none this checkpoint cycle — расследование продолжается)"
+    ],
+    "id": "ses_0c3e0328effe4ury6OqBRWVdsh",
+    "timestamp": "2026-07-09T22:12:26.358867",
+    "files_count": 5
   },
   {
     "topic": "План на неделю (тайм-менеджмент) — VK-бот + бытовые задачи + стройка",
@@ -62,28 +102,6 @@
     ],
     "id": "ses_0c4149c86ffeYqaSkG0AuJE5Eo",
     "timestamp": "2026-07-07T23:30:55.359099",
-    "files_count": 7
-  },
-  {
-    "topic": "Дашборд — анализ нового варианта index2.html (вместо index.html)",
-    "active_intent": "стоп подожди пока всё я начну будем делать заново Посмотри я в папку скинул дашборда индекс 2 это будет как вариант ещё один у него проанализируй и пока ничего не делай просто проанализируй подумай ус",
-    "next_action": "Дать пользователю анализ `dashboard/index2.html`: что уже реализовано, чего не хватает по сравнению с `voice-output.txt` и предыдущим `index.html`. Ждать подтверждения или правок перед любыми изменениями.\n\n> \"пока ничего не делай просто проанализируй подумай устраивай у тебя всё или нет\"",
-    "current_work": "_Description of what was being done immediately before this checkpoint. Mention specific file paths and code locations._\n\n**Анализ нового варианта дашборда — прочитан полностью:**\n\n`dashboard/index2.html` — 2593 строк, полностью self-contained SPA. Прочитан от строки 1 до конца.\n\nЧто уже реализовано в index2.html:\n- Календарь: 4 вида (Месяц/Неделя/День/Год) с индикаторами задач\n- CRUD задач: создание, редактирование, удаление, toggle выполнено\n- Типы задач: онлайн/офлайн, источник, флаг \"идея\"\n-",
-    "files_touched": [
-      "dashboard/index2.html",
-      "dashboard/index.html",
-      "dashboard/пример.html",
-      "voice-output.txt",
-      "dashboard/data/weekly-plan.md",
-      "dashboard/sessions.json",
-      "dashboard/sync_sessions.py"
-    ],
-    "learnings": [],
-    "errors": [
-      "(none this checkpoint cycle)"
-    ],
-    "id": "ses_0c3e0328effe4ury6OqBRWVdsh",
-    "timestamp": "2026-07-07T18:18:57.556176",
     "files_count": 7
   },
   {
@@ -226,29 +244,6 @@
     "id": "ses_0c9c9f30fffeAIuprSfVXFT5VC",
     "timestamp": "2026-07-06T14:57:17.516103",
     "files_count": 3
-  },
-  {
-    "topic": "Локальный дашборд для задач — MVP создан (dashboard/index.html + backup.py)",
-    "active_intent": "вот что я хочу но ты можешь предложить свое и прочитай перед этим клод мд : Мы создаём локальный дашборд, чтобы собрать задачи и идеи из чатов с нейросетями в одном месте, и для хранения бэкапов и обм",
-    "next_action": "Протестировать дашборд в браузере и дорабатывать по необходимости.\n\n> \"да давай потом будем если что дорабатывать\"",
-    "current_work": "_Description of what was being done immediately before this checkpoint. Mention specific file paths and code locations._\n\nСоздан локальный дашборд `dashboard/index.html` — одностраничное SPA с:\n- Недельным планёром (drag-and-drop по дням)\n- Трьмя вкладками: Неделя / Все задачи / Идеи\n- Тип задач: онлайн / офлайн\n- Детекция пересечений (одна задача в разных местах) — подсветка жёлтым + баннер\n- Импорт задач из текстовых файлов (.md/.txt) с выбором источника (Claude Code, ChatGPT)\n- Экспорт в JSON",
-    "files_touched": [
-      "CLAUDE.md",
-      "voice-output.txt",
-      "retrospectives/2026-07-05_full-session.md",
-      "my-ideas/проект/что-делаем.md",
-      "dashboard/index.html",
-      "dashboard/backup.py",
-      "dashboard/data/tasks.json"
-    ],
-    "learnings": [
-      "**Профиль пользователя (обновление):** пользователь — проектировщик монолитных домов (ЖБИ конструкции). Работает в проектировании. Хочет: (1) автоматизация проектирования ЖБИ, (2) монетизация эксперти",
-      "**Локальный дашборд:** данные хранятся в `localStorage` браузера; JSON-файл как fallback. Бэкапы через `backup.py` (CLI) или кнопку в UI. Для синхронизации с телефоном — общая папка Windows (пока не р"
-    ],
-    "errors": [],
-    "id": "ses_0c9c777a9ffevlVrlY68cvDomb",
-    "timestamp": "2026-07-06T13:57:48.352087",
-    "files_count": 7
   },
   {
     "topic": "Вопрос по методологии — когда проверять конкурентов/аналоги",
