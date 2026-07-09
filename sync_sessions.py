@@ -179,9 +179,8 @@ def _push_to_remote(sessions):
 
 
 def _git_commit():
-    """Коммитит и пушит sessions.json в GitHub (если есть git remote)."""
+    """Коммитит и пушит sessions.json + weekly-plan.md в GitHub."""
     try:
-        # Проверяем есть ли git remote
         result = subprocess.run(
             ["git", "remote", "-v"],
             capture_output=True, text=True, cwd=str(REPO_DIR)
@@ -189,25 +188,38 @@ def _git_commit():
         if "origin" not in result.stdout:
             return
 
-        # Проверяем есть ли изменения
-        diff = subprocess.run(
-            ["git", "diff", "--quiet", "sessions.json"],
-            capture_output=True, cwd=str(REPO_DIR)
-        )
-        if diff.returncode == 0:
-            return  # Нет изменений
+        files_to_commit = []
+        for f in ["sessions.json", "data/weekly-plan.md"]:
+            diff = subprocess.run(
+                ["git", "diff", "--quiet", f],
+                capture_output=True, cwd=str(REPO_DIR)
+            )
+            if diff.returncode != 0:
+                files_to_commit.append(f)
 
-        # Коммит и пуш
-        subprocess.run(["git", "add", "sessions.json"], cwd=str(REPO_DIR), check=True)
+        status = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            capture_output=True, text=True, cwd=str(REPO_DIR)
+        )
+        for f in ["sessions.json", "data/weekly-plan.md"]:
+            if f in status.stdout and f not in files_to_commit:
+                files_to_commit.append(f)
+
+        if not files_to_commit:
+            return
+
+        for f in files_to_commit:
+            subprocess.run(["git", "add", f], cwd=str(REPO_DIR), check=True)
+
         ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         subprocess.run(
-            ["git", "commit", "-m", f"🔄 Auto-sync sessions {ts}"],
+            ["git", "commit", "-m", f"🔄 Auto-sync {ts}"],
             cwd=str(REPO_DIR), check=True
         )
         subprocess.run(["git", "push"], cwd=str(REPO_DIR), check=True)
-        print("✅ Закоммичено в GitHub")
+        print(f"✅ Закоммичено: {', '.join(files_to_commit)}")
     except subprocess.CalledProcessError:
-        pass  # Нет изменений или нет remote
+        pass
     except Exception as e:
         print(f"⚠️ Ошибка git: {e}")
 
