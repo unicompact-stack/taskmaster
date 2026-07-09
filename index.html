@@ -284,10 +284,26 @@ body::before {
 /* Responsive */
 @media (max-width: 768px) {
   .sidebar { display: none; }
-  .main { margin-left: 0; }
+  .main { margin-left: 0; padding-bottom: 70px; }
   .week-grid { grid-template-columns: repeat(2,1fr); }
   .year-grid { grid-template-columns: repeat(2,1fr); }
+  .mobile-nav { display: flex !important; }
 }
+
+/* Mobile Bottom Nav */
+.mobile-nav {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(30,41,59,0.95); backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border); z-index: 100;
+  justify-content: space-around; padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+}
+.mobile-nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: all 0.15s;
+  color: var(--text3); font-size: 10px; font-weight: 500; border: none; background: none;
+}
+.mobile-nav-item:hover, .mobile-nav-item.active { color: var(--accent); }
+.mobile-nav-item .icon { font-size: 20px; }
 </style>
 </head>
 <body>
@@ -338,6 +354,14 @@ body::before {
 </div>
 
 <button class="fab" onclick="openTaskModal()">+</button>
+
+<nav class="mobile-nav" id="mobileNav">
+  <button class="mobile-nav-item active" data-tab="calendar"><span class="icon">📅</span>Календарь</button>
+  <button class="mobile-nav-item" data-tab="tasks"><span class="icon">📝</span>Задачи</button>
+  <button class="mobile-nav-item" data-tab="urgent"><span class="icon">⏰</span>Срочные</button>
+  <button class="mobile-nav-item" data-tab="mimo"><span class="icon">🤖</span>MiMo</button>
+  <button class="mobile-nav-item" data-tab="chatbot"><span class="icon">🗣</span>Чат</button>
+</nav>
 
 <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modal-content"></div>
@@ -532,6 +556,24 @@ document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
     const titles = { calendar: 'Календарь дел', tasks: 'Все задачи', urgent: 'Срочные задачи', mimo: 'История MiMo', chatbot: 'Чат-бот' };
     document.getElementById('pageTitle').textContent = titles[currentTab] || 'TaskMaster';
     render();
+    // Sync mobile nav
+    document.querySelectorAll('.mobile-nav-item').forEach(m => m.classList.toggle('active', m.dataset.tab === currentTab));
+  });
+});
+
+// Mobile nav
+document.querySelectorAll('.mobile-nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.mobile-nav-item').forEach(m => m.classList.remove('active'));
+    item.classList.add('active');
+    currentTab = item.dataset.tab;
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + currentTab).classList.add('active');
+    const titles = { calendar: 'Календарь дел', tasks: 'Все задачи', urgent: 'Срочные задачи', mimo: 'История MiMo', chatbot: 'Чат-бот' };
+    document.getElementById('pageTitle').textContent = titles[currentTab] || 'TaskMaster';
+    render();
+    // Sync desktop nav
+    document.querySelectorAll('.nav-item[data-tab]').forEach(n => n.classList.toggle('active', n.dataset.tab === currentTab));
   });
 });
 

@@ -15,7 +15,19 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 
-SESSIONS_DIR = Path.home() / ".local/share/mimocode/memory/sessions"
+# Проверяем все возможные пути: WSL, Windows, WSL через Windows
+_wsl_path = Path("/home/usermimo/.local/share/mimocode/memory/sessions")
+_win_path = Path.home() / ".local/share/mimocode/memory/sessions"
+_wsl_unc = Path("//wsl.localhost/Ubuntu/home/usermimo/.local/share/mimocode/memory/sessions")
+
+if _wsl_path.exists():
+    SESSIONS_DIR = _wsl_path
+elif _win_path.exists():
+    SESSIONS_DIR = _win_path
+elif _wsl_unc.exists():
+    SESSIONS_DIR = _wsl_unc
+else:
+    SESSIONS_DIR = _wsl_path  # fallback
 OUTPUT_FILE = Path(__file__).parent / "sessions.json"
 CONFIG_FILE = Path(__file__).parent / "sync_config.json"
 REPO_DIR = Path(__file__).parent
@@ -179,9 +191,8 @@ def _push_to_remote(sessions):
 
 
 def _git_commit():
-    """Коммитит и пушит sessions.json в GitHub (если есть git remote)."""
+    """Коммитит и пушит sessions.json + weekly-plan.md в GitHub."""
     try:
-        # Проверяем есть ли git remote
         result = subprocess.run(
             ["git", "remote", "-v"],
             capture_output=True, text=True, cwd=str(REPO_DIR)
@@ -189,25 +200,38 @@ def _git_commit():
         if "origin" not in result.stdout:
             return
 
-        # Проверяем есть ли изменения
-        diff = subprocess.run(
-            ["git", "diff", "--quiet", "sessions.json"],
-            capture_output=True, cwd=str(REPO_DIR)
-        )
-        if diff.returncode == 0:
-            return  # Нет изменений
+        files_to_commit = []
+        for f in ["sessions.json", "data/weekly-plan.md"]:
+            diff = subprocess.run(
+                ["git", "diff", "--quiet", f],
+                capture_output=True, cwd=str(REPO_DIR)
+            )
+            if diff.returncode != 0:
+                files_to_commit.append(f)
 
-        # Коммит и пуш
-        subprocess.run(["git", "add", "sessions.json"], cwd=str(REPO_DIR), check=True)
+        status = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            capture_output=True, text=True, cwd=str(REPO_DIR)
+        )
+        for f in ["sessions.json", "data/weekly-plan.md"]:
+            if f in status.stdout and f not in files_to_commit:
+                files_to_commit.append(f)
+
+        if not files_to_commit:
+            return
+
+        for f in files_to_commit:
+            subprocess.run(["git", "add", f], cwd=str(REPO_DIR), check=True)
+
         ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         subprocess.run(
-            ["git", "commit", "-m", f"🔄 Auto-sync sessions {ts}"],
+            ["git", "commit", "-m", f"🔄 Auto-sync {ts}"],
             cwd=str(REPO_DIR), check=True
         )
         subprocess.run(["git", "push"], cwd=str(REPO_DIR), check=True)
-        print("✅ Закоммичено в GitHub")
+        print(f"✅ Закоммичено: {', '.join(files_to_commit)}")
     except subprocess.CalledProcessError:
-        pass  # Нет изменений или нет remote
+        pass
     except Exception as e:
         print(f"⚠️ Ошибка git: {e}")
 
