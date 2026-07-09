@@ -15,7 +15,10 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 
-SESSIONS_DIR = Path.home() / ".local/share/mimocode/memory/sessions"
+# Проверяем оба пути: WSL и Windows
+_wsl_path = Path("/home/usermimo/.local/share/mimocode/memory/sessions")
+_win_path = Path.home() / ".local/share/mimocode/memory/sessions"
+SESSIONS_DIR = _wsl_path if _wsl_path.exists() else _win_path
 OUTPUT_FILE = Path(__file__).parent / "sessions.json"
 CONFIG_FILE = Path(__file__).parent / "sync_config.json"
 REPO_DIR = Path(__file__).parent
