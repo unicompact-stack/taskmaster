@@ -1,34 +1,34 @@
 [
   {
-    "topic": "Ручная синхронизация дашборда — кнопка вместо cron",
-    "active_intent": "а может автоматически не надо пусть будет по моему нажатию допустим на кнопку синхронизации или еще как то или так нельзя",
-    "next_action": "Модифицировать server.py — чтобы POST `/api/sync` запускал sync_sessions.py + git push, и в дашборде была кнопка «Синхронизировать», которая вызывает этот endpoint.",
-    "current_work": "**Переключение с автоматической (cron) на ручную синхронизацию:**\n\n1. **Cron удалён** — `echo \"\" | crontab -` — cron-задача `*/5 * * * *` удалена\n2. **Следующий шаг:** модифицировать `dashboard/server.py` — POST `/api/sync` должен запускать `sync_sessions.py` + git push (а не просто сохранять JSON)\n3. **В дашборде:** добавить кнопку «Синхронизировать» в интерфейс, которая вызывает `/api/sync`\n4. **Результат:** пользователь нажимает кнопку → sync_sessions.py запускается → git push → GitHub Pages ",
+    "topic": "Настройка GitHub-синхронизации, дашборда и плана на неделю",
+    "active_intent": "Так давай дальше пойдём не видит план на неделю в чём дело то есть как он работает но в нашей ситуации",
+    "next_action": "Исправление `loadPlan()` в `dashboard/index.html` — добавить fallback на GitHub raw URL (GITHUB_PLAN), аналогично loadSessions(). Пуш в GitHub.\n\n> \"не видит план на неделю в чём дело\"",
+    "current_work": "**Фикс плана на неделю в дашборде:**\n\n1. `loadPlan()` обращался к `/api/plan` → на GitHub Pages сервера нет → пустой результат\n2. Найдено: `data/weekly-plan.md` есть на GitHub raw\n3. Добавлен `GITHUB_PLAN` константа в `dashboard/index.html`\n4. `loadPlan()` обновлён: сначала API → fallback на GitHub raw → localStorage\n5. Ожидание: пуш изменений в GitHub",
     "files_touched": [
       "dashboard/index.html",
-      "dashboard/sync_sessions.py",
-      "dashboard/server.py",
-      "dashboard/sync_config.json",
-      "dashboard/deploy/index.html"
+      "dashboard/data/weekly-plan.md",
+      "dashboard/auto_sync.py",
+      "dashboard/start_sync.bat"
     ],
     "learnings": [
-      "**GITHUB_RAW путь:** если репозиторий содержит папку dashboard/, URL должен быть `.../main/dashboard/sessions.json` (не `.../main/sessions.json`). Иначе 404.",
-      "**loadSessions fallback chain:** API сервера → GitHub raw (GITHUB_RAW) → localStorage. Работает на GitHub Pages без сервера.",
-      "**Cron в WSL работает:** `service cron status`, `crontab -e`. Удалён по запросу пользователя.",
-      "**sync_sessions.py — 3 sinks:** (1) локальный sessions.json, (2) git commit+push, (3) POST на удалённый сервер."
+      "**loadPlan() fallback:** на GitHub Pages API недоступен. Нужен fallback: API → GitHub raw (GITHUB_PLAN) → localStorage. Аналогичный паттерн что и loadSessions().",
+      "**weekly-plan.md на GitHub:** файл доступен через raw.githubusercontent.com. Формат: markdown с заголовками дней `#### День (ДД.ММ)` и чекбоксами `- [ ] задача`.",
+      "**Cron vs auto_sync.py (простыми словами):** cron = будильник (настроил один раз, работает сам). auto_sync.py = скрипт (запускай каждый раз вручную). Cron надёжнее."
     ],
     "errors": [
-      "**GITHUB_RAW 404** — URL указывал в корень репозитория, файл в `dashboard/sessions.json`. Исправлено: добавлен `/dashboard/` в путь."
+      "**GITHUB_RAW 404 (ранее):** URL указывал `.../main/dashboard/sessions.json`, файлы в корне. Исправлено: `.../main/sessions.json`",
+      "**Git push rejected (ранее):** remote содержит файлы от ручной загрузки. Исправлено: `git push --force`",
+      "**План на неделю не отображался:** `loadPlan()` обращался к `/api/plan` → на GitHub Pages нет сервера → пустой результат. Исправление: fallback на GITHUB_PLAN."
     ],
     "id": "ses_0bf81b7ceffe5jN2vh8kBRDnSR",
-    "timestamp": "2026-07-08T22:02:56.979180",
-    "files_count": 5
+    "timestamp": "2026-07-09T09:17:02.696592",
+    "files_count": 4
   },
   {
-    "topic": "План на неделю (тайм-менеджмент) — проверка по дорожной карте",
+    "topic": "План на неделю (тайм-менеджмент) — VK-бот + бытовые задачи + стройка",
     "active_intent": "",
-    "next_action": "Дождаться ответа пользователя на 5 вопросов по плану на неделю. После ответов — обновить план в `dashboard/data/weekly-plan.md` с учётом рекомендаций (фокус на VK-бот, убрать дашборд/AI-Clone из приоритетов этой недели).",
-    "current_work": "_Description of what was being done immediately before this checkpoint. Mention specific file paths and code locations._\n\nОбсуждение плана на неделю (07-13 июля 2026). Агент выступил в роли тайм-менеджера и задал 5 вопросов пользователю:\n\n1. **Приоритет vs Реальность** — 3 потока в плане (дашборд, VK-бот, AI-Clone), но дорожная карта говорит только про VK-бот. Сколько часов в неделю на код?\n2. **Сквозной темп** — 2 задачи в день, реалистично ли?\n3. **Зависимости** — автопубликация (ср) зависит о",
+    "next_action": "Сохранить финальный план на неделю в `dashboard/data/weekly-plan.md`. План:\n\n**Вторник (08.07):** ☎️ Звонок насчёт газа + VK-бот: генерация постов по шаблонам\n**Среда (09.07):** VK-бот: автопубликация по расписанию\n**Четверг (10.07):** VK-бот: шаблоны контента для строителей\n**Пятница (11.07):** Тес",
+    "current_work": "_Description of what was being done immediately before this checkpoint. Mention specific file paths and code locations._\n\nУтверждение плана на неделю (07-13 июля 2026). Пользователь подтвердил план — ждёт сохранения.\n\nФинальный план:\n- **Пн (07.07):** ✅ Дашборд: автосинхронизация — сделано\n- **Вт (08.07):** ☎️ Звонок насчёт газа + VK-бот: генерация постов\n- **Ср (09.07):** VK-бот: автопубликация\n- **Чт (10.07):** VK-бот: шаблоны контента для строителей\n- **Пт (11.07):** Тестирование VK-бота + ре",
     "files_touched": [
       "voice-output.txt",
       "architecture/09-дорожная-карта/первая-фича.md",
@@ -39,7 +39,7 @@
     "learnings": [],
     "errors": [],
     "id": "ses_0c37a7728ffessEPOO5fGSRQzr",
-    "timestamp": "2026-07-08T09:58:11.175330",
+    "timestamp": "2026-07-09T09:08:13.756578",
     "files_count": 5
   },
   {
